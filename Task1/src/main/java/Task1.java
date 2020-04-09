@@ -1,5 +1,3 @@
-package tasks;
-
 import localStorage.RequestData;
 import threads.ConsumerRunnable;
 import threads.ProducerRunnable;
