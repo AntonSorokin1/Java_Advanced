@@ -73,7 +73,10 @@ public class AccountServiceImpl implements AccountService {
             logger.log(Level.INFO, String.format("Transfer from %s to %s started!", from, to));
         }
         synchronized (from) {
-            if (!AccountUtility.checkBalance(from)) throw new NotEnoughBalanceException();
+            if (!AccountUtility.checkBalance(from)) {
+                logger.log(Level.INFO, String.format("Not enough balance! Transfer from %s to %s ended!", from, to));
+                throw new NotEnoughBalanceException();
+            }
             AccountUtility.changeAccountBalanceTo(from, value * -1);
             logger.log(Level.INFO, String.format("%d transfer from %s complete!", value, from.toString()));
         }
