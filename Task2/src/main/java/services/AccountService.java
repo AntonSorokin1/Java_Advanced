@@ -1,6 +1,7 @@
 package services;
 
 import entity.Customer;
+import exceptions.NotEnoughBalanceException;
 
 import java.util.List;
 
@@ -13,5 +14,5 @@ public interface AccountService {
 
     Customer getAccountById(Long id);
 
-    void transferMoney(Customer from, Customer to, Long value);
+    void transferMoney(Customer from, Customer to, Long value) throws NotEnoughBalanceException;
 }

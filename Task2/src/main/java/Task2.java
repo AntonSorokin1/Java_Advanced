@@ -1,14 +1,17 @@
 import entity.Customer;
+import runnableImpl.TransferOperation;
 import services.AccountService;
 import services.impl.AccountServiceImpl;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Task2 {
     private final int NUMBER_OF_THREADS = 20;
-    private final int NUMBER_OF_OPERATIONS = 1000;
+    private final int NUMBER_OPERATIONS = 1000;
 
     public void start() {
         List<Customer> customers = Arrays.asList(
@@ -24,18 +27,18 @@ public class Task2 {
                 new Customer(10L, "Silly", 0L)
         );
 
-        AccountService service = new AccountServiceImpl();
+        AccountService accountService = new AccountServiceImpl();
+        ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
         Random random = new Random();
-        for (int i = 0; i < NUMBER_OF_THREADS / 2; i++) {
-            new Thread(() -> {
-                for (int j = 0; j < NUMBER_OF_OPERATIONS / 2; j++)
-                    service.transferMoney(customers.get(0), customers.get(random.nextInt(8) + 1), random.nextLong());
-            }){{start();}};
-            new Thread(() -> {
-                for (int j = 0; j < NUMBER_OF_OPERATIONS / 2; j++)
-                    service.transferMoney(customers.get(random.nextInt(8) + 1), customers.get(0), random.nextLong());
-            }){{start();}};
+        for (int i = 0; i < NUMBER_OPERATIONS / 2; i++) {
+            executorService.submit(
+                new TransferOperation(accountService, customers.get(0), customers.get(random.nextInt(8) + 1), random.nextLong())
+            );
+            executorService.submit(
+                new TransferOperation(accountService, customers.get(random.nextInt(8) + 1), customers.get(0), random.nextLong())
+            );
         }
+        executorService.shutdown();
     }
 }
