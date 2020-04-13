@@ -33,13 +33,15 @@ public class AccountServiceImpl implements AccountService {
         catch (IOException e) {
             e.printStackTrace();
         }
-
+        customer.setLocked(true);
         assert file != null;
         try (ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file))) {
             stream.writeObject(customer);
         } catch (IOException e) {
+            customer.setLocked(false);
             e.printStackTrace();
         }
+        customer.setLocked(false);
     }
 
     @Override
@@ -76,20 +78,20 @@ public class AccountServiceImpl implements AccountService {
         logger.log(Level.INFO, String.format("Transfer from %s to %s started!", from, to));
         lock.unlock();
 
-        from.setLock(true);
-        if (!AccountUtility.checkBalance(from)) {
+        from.setLocked(true);
+        if (!AccountUtility.checkTransfer(from, value)) {
             logger.log(Level.INFO, String.format("Not enough balance! Transfer from %s to %s ended!", from, to));
-            from.setLock(false);
+            from.setLocked(false);
             throw new NotEnoughBalanceException();
         }
         AccountUtility.changeAccountBalanceTo(from, value * -1);
         logger.log(Level.INFO, String.format("%d transfer from %s complete!", value, from.toString()));
-        from.setLock(false);
+        from.setLocked(false);
 
-        to.setLock(true);
+        to.setLocked(true);
         AccountUtility.changeAccountBalanceTo(to, value);
         logger.log(Level.INFO, String.format("%d transfer to %s complete!", value, to.toString()));
-        to.setLock(false);
+        to.setLocked(false);
 
         lock.lock();
         logger.log(Level.INFO, String.format("Transfer from %s to %s ended!", from, to));

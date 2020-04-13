@@ -33,8 +33,7 @@ public class Customer implements Serializable {
     public boolean isBanned() { return isBanned; }
     public void setBanned(boolean banned) { isBanned = banned; }
 
-    public Lock getLock() { return lock; }
-    public void setLock(boolean value) {
+    public void setLocked(boolean value) {
         if (value) lock.lock();
         else lock.unlock();
     }
