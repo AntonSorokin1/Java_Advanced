@@ -8,6 +8,7 @@ import utilities.AccountUtility;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -16,6 +17,7 @@ import java.util.logging.Logger;
 public class AccountServiceImpl implements AccountService {
     private final String FILE_EXTENSION = ".acc";
     private Logger logger = Logger.getLogger(AccountService.class.getName());
+    private static Lock lock = new ReentrantLock();
 
     @Override
     public void writeAccount(Customer customer) {
@@ -23,7 +25,7 @@ public class AccountServiceImpl implements AccountService {
 
         File file = null;
         try {
-            File fileDir = new File(AccountServiceImpl.class.getClassLoader().getResource("").getFile(), "accounts");
+            File fileDir = new File(Objects.requireNonNull(AccountServiceImpl.class.getClassLoader().getResource("")).getFile(), "accounts");
             if (!fileDir.exists()) logger.log(Level.INFO, "File directory creating - " + fileDir.mkdir());
             file = new File(fileDir, fileName);
             if (!file.exists()) logger.log(Level.INFO,"File creating - " + file.createNewFile());
@@ -32,6 +34,7 @@ public class AccountServiceImpl implements AccountService {
             e.printStackTrace();
         }
 
+        assert file != null;
         try (ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file))) {
             stream.writeObject(customer);
         } catch (IOException e) {
@@ -47,8 +50,8 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public List<Customer> readAllAccounts() {
         List<Customer> customerList = new ArrayList<>();
-        File accountFiles = new File(AccountServiceImpl.class.getClassLoader().getResource("accounts").getFile());
-        for (File file : accountFiles.listFiles()) {
+        File accountFiles = new File(Objects.requireNonNull(AccountServiceImpl.class.getClassLoader().getResource("accounts")).getFile());
+        for (File file : Objects.requireNonNull(accountFiles.listFiles())) {
             try (ObjectInputStream stream = new ObjectInputStream(new FileInputStream(file))) {
                 customerList.add((Customer)stream.readObject());
             }
@@ -69,23 +72,27 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void transferMoney(Customer from, Customer to, Long value) throws NotEnoughBalanceException {
-        synchronized (this) {
-            logger.log(Level.INFO, String.format("Transfer from %s to %s started!", from, to));
+        lock.lock();
+        logger.log(Level.INFO, String.format("Transfer from %s to %s started!", from, to));
+        lock.unlock();
+
+        from.setLock(true);
+        if (!AccountUtility.checkBalance(from)) {
+            logger.log(Level.INFO, String.format("Not enough balance! Transfer from %s to %s ended!", from, to));
+            from.setLock(false);
+            throw new NotEnoughBalanceException();
         }
-        synchronized (from) {
-            if (!AccountUtility.checkBalance(from)) {
-                logger.log(Level.INFO, String.format("Not enough balance! Transfer from %s to %s ended!", from, to));
-                throw new NotEnoughBalanceException();
-            }
-            AccountUtility.changeAccountBalanceTo(from, value * -1);
-            logger.log(Level.INFO, String.format("%d transfer from %s complete!", value, from.toString()));
-        }
-        synchronized (to) {
-            AccountUtility.changeAccountBalanceTo(to, value);
-            logger.log(Level.INFO, String.format("%d transfer to %s complete!", value, to.toString()));
-        }
-        synchronized (this) {
-            logger.log(Level.INFO, String.format("Transfer from %s to %s ended!", from, to));
-        }
+        AccountUtility.changeAccountBalanceTo(from, value * -1);
+        logger.log(Level.INFO, String.format("%d transfer from %s complete!", value, from.toString()));
+        from.setLock(false);
+
+        to.setLock(true);
+        AccountUtility.changeAccountBalanceTo(to, value);
+        logger.log(Level.INFO, String.format("%d transfer to %s complete!", value, to.toString()));
+        to.setLock(false);
+
+        lock.lock();
+        logger.log(Level.INFO, String.format("Transfer from %s to %s ended!", from, to));
+        lock.unlock();
     }
 }

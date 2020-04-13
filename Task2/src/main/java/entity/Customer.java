@@ -2,12 +2,15 @@ package entity;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Customer implements Serializable {
     private Long id;
     private String name;
     private Long balance;
     private boolean isBanned;
+    private Lock lock = new ReentrantLock();
 
     public Customer() { }
 
@@ -29,6 +32,12 @@ public class Customer implements Serializable {
 
     public boolean isBanned() { return isBanned; }
     public void setBanned(boolean banned) { isBanned = banned; }
+
+    public Lock getLock() { return lock; }
+    public void setLock(boolean value) {
+        if (value) lock.lock();
+        else lock.unlock();
+    }
 
     @Override
     public boolean equals(Object o) {
